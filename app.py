@@ -8,13 +8,13 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import r2_score
 import io
 
-# --- Page Config ---
+
 st.set_page_config(page_title="HealthCalc AI", page_icon="🏥", layout="wide")
 
-# Conversion Rate: 1 USD = 83 INR (Approx)
+
 INR_CONVERSION = 83
 
-# Custom CSS for a cleaner look
+
 st.markdown("""
     <style>
     .main { background-color: #f5f7f9; }
@@ -22,21 +22,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- Title Section ---
+
 st.title("🏥 Healthcare Cost Prediction & Analytics")
 st.markdown("Predict annual medical charges in **Indian Rupees (₹)** and explore data trends using Machine Learning.")
 
-# --- Step 1: Load & Prepare Data ---
+
 @st.cache_data
 def load_and_process_data():
     df = pd.read_csv('insurance.csv')
     
-    # Convert USD charges to INR
+  
     df['charges'] = df['charges'] * INR_CONVERSION
     
     plot_df = df.copy()
     
-    # Encoding categorical variables
+   
     le = LabelEncoder()
     df['sex'] = le.fit_transform(df['sex'])
     df['smoker'] = le.fit_transform(df['smoker'])
@@ -47,7 +47,7 @@ def load_and_process_data():
 try:
     df, plot_df = load_and_process_data()
     
-    # --- Step 2: Model Training ---
+ 
     X = df.drop('charges', axis=1)
     y = df['charges']
     
@@ -59,7 +59,7 @@ try:
     y_pred = model.predict(X_test)
     accuracy = r2_score(y_test, y_pred)
 
-    # --- Sidebar: User Inputs ---
+  
     st.sidebar.header("📝 Patient Information")
     age = st.sidebar.slider("Age", 18, 100, 30)
     sex = st.sidebar.selectbox("Gender", ["Female", "Male"])
@@ -73,7 +73,6 @@ try:
     region_map = {"Northeast": 0, "Northwest": 1, "Southeast": 2, "Southwest": 3}
     region_val = region_map[region]
 
-    # --- Prediction Result ---
     input_data = np.array([[age, sex_val, bmi, children, smoker_val, region_val]])
     prediction = model.predict(input_data)[0]
 
@@ -81,7 +80,7 @@ try:
 
     with col1:
         st.subheader("Results")
-        # Displaying in Rupees
+     
         st.metric(label="Estimated Annual Cost", value=f"₹{prediction:,.2f}")
         st.write(f"**Model Confidence:** {accuracy:.2%}")
         
@@ -114,7 +113,7 @@ try:
         fig_imp.update_layout(height=250, margin=dict(l=0, r=0, t=30, b=0))
         st.plotly_chart(fig_imp, use_container_width=True)
 
-    # --- Data Visualizations ---
+  
     st.divider()
     st.subheader("📊 Population Data Trends")
     
