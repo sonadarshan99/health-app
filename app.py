@@ -11,6 +11,9 @@ import io
 # --- Page Config ---
 st.set_page_config(page_title="HealthCalc AI", page_icon="🏥", layout="wide")
 
+# Conversion Rate: 1 USD = 83 INR (Approx)
+INR_CONVERSION = 83
+
 # Custom CSS for a cleaner look
 st.markdown("""
     <style>
@@ -21,18 +24,19 @@ st.markdown("""
 
 # --- Title Section ---
 st.title("🏥 Healthcare Cost Prediction & Analytics")
-st.markdown("Predict annual medical charges and explore the underlying data trends using Machine Learning.")
+st.markdown("Predict annual medical charges in **Indian Rupees (₹)** and explore data trends using Machine Learning.")
 
 # --- Step 1: Load & Prepare Data ---
 @st.cache_data
 def load_and_process_data():
-    # Ensure insurance.csv is in the same folder
     df = pd.read_csv('insurance.csv')
     
-    # We keep a copy of the original for plotting
+    # Convert USD charges to INR
+    df['charges'] = df['charges'] * INR_CONVERSION
+    
     plot_df = df.copy()
     
-    # Encoding categorical variables for the Model
+    # Encoding categorical variables
     le = LabelEncoder()
     df['sex'] = le.fit_transform(df['sex'])
     df['smoker'] = le.fit_transform(df['smoker'])
@@ -43,7 +47,7 @@ def load_and_process_data():
 try:
     df, plot_df = load_and_process_data()
     
-    # --- Step 2: Model Training (Random Forest) ---
+    # --- Step 2: Model Training ---
     X = df.drop('charges', axis=1)
     y = df['charges']
     
@@ -52,7 +56,6 @@ try:
     model = RandomForestRegressor(n_estimators=100, max_depth=7, random_state=42)
     model.fit(X_train, y_train)
     
-    # Metrics
     y_pred = model.predict(X_test)
     accuracy = r2_score(y_test, y_pred)
 
@@ -65,7 +68,6 @@ try:
     smoker = st.sidebar.selectbox("Smoker?", ["No", "Yes"])
     region = st.sidebar.selectbox("Region", ["Northeast", "Northwest", "Southeast", "Southwest"])
 
-    # Map inputs back to encoded values for prediction
     sex_val = 0 if sex == "Female" else 1
     smoker_val = 1 if smoker == "Yes" else 0
     region_map = {"Northeast": 0, "Northwest": 1, "Southeast": 2, "Southwest": 3}
@@ -79,10 +81,10 @@ try:
 
     with col1:
         st.subheader("Results")
-        st.metric(label="Estimated Annual Cost", value=f"${prediction:,.2f}")
+        # Displaying in Rupees
+        st.metric(label="Estimated Annual Cost", value=f"₹{prediction:,.2f}")
         st.write(f"**Model Confidence:** {accuracy:.2%}")
         
-        # --- Download Feature ---
         report_text = f"""
         HEALTHCARE COST REPORT
         ----------------------
@@ -93,7 +95,7 @@ try:
         Smoker: {smoker}
         Region: {region}
         
-        ESTIMATED COST: ${prediction:,.2f}
+        ESTIMATED COST: ₹{prediction:,.2f}
         Model Accuracy: {accuracy:.2%}
         """
         st.download_button(
@@ -104,16 +106,15 @@ try:
         )
 
     with col2:
-        # Feature Importance Chart
         importances = model.feature_importances_
         feat_df = pd.DataFrame({'Feature': X.columns, 'Importance': importances}).sort_values('Importance')
         fig_imp = px.bar(feat_df, x='Importance', y='Feature', orientation='h', 
-                         title="Key Factors Influencing Your Price",
+                         title="Key Factors Influencing Price",
                          color='Importance', color_continuous_scale='Blues')
         fig_imp.update_layout(height=250, margin=dict(l=0, r=0, t=30, b=0))
         st.plotly_chart(fig_imp, use_container_width=True)
 
-    # --- Data Visualizations Section ---
+    # --- Data Visualizations ---
     st.divider()
     st.subheader("📊 Population Data Trends")
     
@@ -121,14 +122,14 @@ try:
     
     with tab1:
         fig_bmi = px.scatter(plot_df, x="bmi", y="charges", color="smoker",
-                             title="How BMI and Smoking drive Costs",
-                             labels={"bmi": "BMI", "charges": "Medical Charges ($)", "smoker": "Smoker"},
+                             title="How BMI and Smoking drive Costs (in ₹)",
+                             labels={"bmi": "BMI", "charges": "Medical Charges (₹)", "smoker": "Smoker"},
                              color_discrete_map={"yes": "#ef553b", "no": "#636efa"})
         st.plotly_chart(fig_bmi, use_container_width=True)
     
     with tab2:
         reg_avg = plot_df.groupby('region')['charges'].mean().reset_index()
-        fig_reg = px.pie(reg_avg, values='charges', names='region', title="Average Cost Distribution by Region",
+        fig_reg = px.pie(reg_avg, values='charges', names='region', title="Average Cost Distribution (in ₹)",
                          hole=0.4, color_discrete_sequence=px.colors.sequential.RdBu)
         st.plotly_chart(fig_reg, use_container_width=True)
 
